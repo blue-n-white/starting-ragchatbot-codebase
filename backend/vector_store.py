@@ -2,8 +2,39 @@ import chromadb
 from chromadb.config import Settings
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
+import hashlib
+import math
 from models import Course, CourseChunk
-from sentence_transformers import SentenceTransformer
+
+
+class SimpleEmbeddingFunction(chromadb.EmbeddingFunction):
+    """Offline bag-of-words embedding for demo mode. No model download needed."""
+
+    def __init__(self):
+        pass
+
+    def __call__(self, input: list) -> list:
+        dim = 384
+        results = []
+        for text in input:
+            vec = [0.0] * dim
+            for word in text.lower().split():
+                idx = int(hashlib.md5(word.encode()).hexdigest(), 16) % dim
+                vec[idx] += 1.0
+            norm = math.sqrt(sum(x * x for x in vec)) or 1.0
+            results.append([x / norm for x in vec])
+        return results
+
+    @staticmethod
+    def name() -> str:
+        return "simple_demo"
+
+    def get_config(self) -> Dict[str, Any]:
+        return {}
+
+    @staticmethod
+    def build_from_config(config: Dict[str, Any]) -> "SimpleEmbeddingFunction":
+        return SimpleEmbeddingFunction()
 
 @dataclass
 class SearchResults:
@@ -34,18 +65,21 @@ class SearchResults:
 class VectorStore:
     """Vector storage using ChromaDB for course content and metadata"""
     
-    def __init__(self, chroma_path: str, embedding_model: str, max_results: int = 5):
+    def __init__(self, chroma_path: str, embedding_model: str, max_results: int = 5, demo_mode: bool = False):
         self.max_results = max_results
         # Initialize ChromaDB client
         self.client = chromadb.PersistentClient(
             path=chroma_path,
             settings=Settings(anonymized_telemetry=False)
         )
-        
-        # Set up sentence transformer embedding function
-        self.embedding_function = chromadb.utils.embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name=embedding_model
-        )
+
+        # Set up embedding function
+        if demo_mode:
+            self.embedding_function = SimpleEmbeddingFunction()
+        else:
+            self.embedding_function = chromadb.utils.embedding_functions.SentenceTransformerEmbeddingFunction(
+                model_name=embedding_model
+            )
         
         # Create collections for different types of data
         self.course_catalog = self._create_collection("course_catalog")  # Course titles/instructors

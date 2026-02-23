@@ -12,12 +12,18 @@ class RAGSystem:
     
     def __init__(self, config):
         self.config = config
-        
+
         # Initialize core components
         self.document_processor = DocumentProcessor(config.CHUNK_SIZE, config.CHUNK_OVERLAP)
-        self.vector_store = VectorStore(config.CHROMA_PATH, config.EMBEDDING_MODEL, config.MAX_RESULTS)
-        self.ai_generator = AIGenerator(config.ANTHROPIC_API_KEY, config.ANTHROPIC_MODEL)
+        self.vector_store = VectorStore(config.CHROMA_PATH, config.EMBEDDING_MODEL, config.MAX_RESULTS, demo_mode=config.DEMO_MODE)
         self.session_manager = SessionManager(config.MAX_HISTORY)
+
+        # Skip AI generator in demo mode
+        if config.DEMO_MODE:
+            print("Running in DEMO MODE - no API key or model downloads required")
+            self.ai_generator = None
+        else:
+            self.ai_generator = AIGenerator(config.ANTHROPIC_API_KEY, config.ANTHROPIC_MODEL)
         
         # Initialize search tools
         self.tool_manager = ToolManager()
@@ -110,27 +116,36 @@ class RAGSystem:
         Returns:
             Tuple of (response, sources list - empty for tool-based approach)
         """
-        # Create prompt for the AI with clear instructions
-        prompt = f"""Answer this question about course materials: {query}"""
-        
-        # Get conversation history if session exists
-        history = None
-        if session_id:
-            history = self.session_manager.get_conversation_history(session_id)
-        
-        # Generate response using AI with tools
-        response = self.ai_generator.generate_response(
-            query=prompt,
-            conversation_history=history,
-            tools=self.tool_manager.get_tool_definitions(),
-            tool_manager=self.tool_manager
-        )
-        
-        # Get sources from the search tool
-        sources = self.tool_manager.get_last_sources()
+        if self.ai_generator is None:
+            # Demo mode: search directly, return raw results
+            search_result = self.tool_manager.execute_tool(
+                "search_course_content", query=query
+            )
+            sources = self.tool_manager.get_last_sources()
+            self.tool_manager.reset_sources()
+            response = f"**[Demo Mode]** Here are the relevant course materials:\n\n{search_result}"
+        else:
+            # Create prompt for the AI with clear instructions
+            prompt = f"""Answer this question about course materials: {query}"""
 
-        # Reset sources after retrieving them
-        self.tool_manager.reset_sources()
+            # Get conversation history if session exists
+            history = None
+            if session_id:
+                history = self.session_manager.get_conversation_history(session_id)
+
+            # Generate response using AI with tools
+            response = self.ai_generator.generate_response(
+                query=prompt,
+                conversation_history=history,
+                tools=self.tool_manager.get_tool_definitions(),
+                tool_manager=self.tool_manager
+            )
+
+            # Get sources from the search tool
+            sources = self.tool_manager.get_last_sources()
+
+            # Reset sources after retrieving them
+            self.tool_manager.reset_sources()
         
         # Update conversation history
         if session_id:

@@ -24,6 +24,9 @@ class Config:
     # Database paths
     CHROMA_PATH: str = "./chroma_db"  # ChromaDB storage location
 
+    # Demo mode - runs without API key or HuggingFace model downloads
+    DEMO_MODE: bool = os.getenv("DEMO_MODE", "false").lower() == "true"
+
 config = Config()
 
 

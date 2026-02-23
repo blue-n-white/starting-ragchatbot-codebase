@@ -243,6 +243,21 @@ header h1 {
 .sources-content {
     padding: 0 0.5rem 0.25rem 1.5rem;
     color: var(--text-secondary);
+    list-style: none;
+}
+
+.sources-content li {
+    padding: 0.15rem 0;
+}
+
+.sources-content a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.sources-content a:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
 }
 
 /* Markdown formatting styles */

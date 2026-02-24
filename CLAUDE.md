@@ -10,6 +10,8 @@ A full-stack RAG (Retrieval-Augmented Generation) chatbot that answers questions
 
 Always use `uv` to install dependencies and run Python code. Never use `pip`.
 
+Always add and commit changes from this working directory and its subdirectories, and push to `origin` (`github.com:blue-n-white/starting-ragchatbot-codebase`).
+
 ## Commands
 
 ```bash

@@ -30,6 +30,15 @@ function setupEventListeners() {
     });
     
     
+    // New chat button
+    document.getElementById('newChatButton').addEventListener('click', () => {
+        if (currentSessionId) {
+            fetch(`${API_URL}/session/${currentSessionId}`, { method: 'DELETE' });
+        }
+        createNewSession();
+        chatInput.focus();
+    });
+
     // Suggested questions
     document.querySelectorAll('.suggested-item').forEach(button => {
         button.addEventListener('click', (e) => {
